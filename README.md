@@ -5,9 +5,8 @@ This is a driver library for the 24GHz Seeed Human Static Presence Lite mmWave s
 ### Functions
 
 
-|  |  |
-| --- | --- |
 | **Function** | **Description** |
+| ------------------------ | -------------|
 | bool resetRadar(); | resets the radar module. Note that this does not appear to eliminate any parameters saveed, but reloads the settings. This appears to be necessary occassionally. returns true on success. |
 | bool setScenario(byte scenario); | sets the built-in scenario model to use. presets are: living room, area detection, bedroom and bathroom. returns true if successful. |
 | byte getScenario(); | returns the current scenario in use. |
