@@ -300,6 +300,26 @@ byte Radar::getPresenceRange() {
 }
 
 /*!
+ * @fn timeOfAbsence
+ * @brief set the time to wait before absence is reported
+ * @param byte value between 0 and 08
+ * @returns true for success, false for failed
+ */
+bool Radar::setPresenceThreshold(byte t) {
+	return setParam(WORKING_STATUS, SET_TIME_OF_ABSENCE, t);
+}
+
+/*!
+ * @fn getTimeOfAbsence
+ * @brief gets the current time before absence is reported value
+ * @returns byte value on success, -1 on failure
+ */
+byte Radar::getPresenceThreshold() {
+	return getParam(WORKING_STATUS, GET_TIME_OF_ABSENCE);
+}
+
+
+/*!
  * @fn setMotionThreshold
  * @brief set motion threshold for the current custom mode
  * @param byte value between 0 and 250

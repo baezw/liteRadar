@@ -30,6 +30,9 @@
 #define SET_PRESENCE_RANGE			0x0A		// set range for presence detection
 #define GET_PRESENCE_RANGE			0x8A		// get range for presence detection
 
+#define SET_TIME_OF_ABSENCE			0x0A		//	set time of absence command
+#define GET_TIME_OF_ABSENCE			0x8A		//	get time of absence command
+
 #define SET_MOTION_THRESHOLD		0x09		// set motion threshold command
 #define GET_MOTION_THRESHOLD		0x89		// get motion threshold command
 
@@ -100,6 +103,8 @@ class Radar {
 		bool exitCustomMode();
 		bool setPresenceThreshold(byte threshold);
 		byte getPresenceThreshold();
+		bool setTimeOfAbsence(byte threshold);
+		byte getTimeOfAbsence();
 		bool setPresenceRange(byte range);
 		byte getPresenceRange();
 		bool setMotionThreshold(byte threshold);
