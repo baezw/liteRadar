@@ -125,12 +125,8 @@ bool Radar::setParam(byte control, byte command, byte value) {									 // curre
 				}
 			}
 			n = n + 1;
-			if ((millis() - start_time >= 3000)) {
+			if ((millis() - start_time >= 2000)) {
 				Serial.println("timed out waiting for correct response");
-				return false;
-			}
-			if (n > 20) {
-				Serial.println("20 frames without correct response");
 				return false;
 			}
 		}
@@ -170,12 +166,8 @@ byte Radar::getParam(byte control, byte command) {				// currently only works wi
 				}
 			}
 			n = n + 1;
-			if ((millis() - start_time >= 3000)) {
+			if ((millis() - start_time >= 2000)) {
 				Serial.println("timed out waiting for correct response");
-				return false;
-			}
-			if (n > 20) {
-				Serial.println("20 frames without correct response");
 				return false;
 			}
 		}
