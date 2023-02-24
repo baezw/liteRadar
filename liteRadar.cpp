@@ -305,7 +305,7 @@ byte Radar::getPresenceRange() {
  * @param byte value between 0 and 08
  * @returns true for success, false for failed
  */
-bool Radar::setPresenceThreshold(byte t) {
+bool Radar::setTimeOfAbsence(byte t) {
 	return setParam(WORKING_STATUS, SET_TIME_OF_ABSENCE, t);
 }
 
@@ -314,7 +314,7 @@ bool Radar::setPresenceThreshold(byte t) {
  * @brief gets the current time before absence is reported value
  * @returns byte value on success, -1 on failure
  */
-byte Radar::getPresenceThreshold() {
+byte Radar::getTimeOfAbsence() {
 	return getParam(WORKING_STATUS, GET_TIME_OF_ABSENCE);
 }
 
