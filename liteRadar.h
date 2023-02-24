@@ -63,8 +63,6 @@
 #define ZERO_F						0x0F		// convienience
 #define INIT_COMPLETE				0x01		// init complete return command
 
-#undef DEBUG
-
 /*!
  * @struct		Frame
  * @param		msg		buffer to hold the frame

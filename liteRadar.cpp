@@ -113,10 +113,7 @@ bool Radar::setParam(byte control, byte command, byte value) {									 // curre
 	req.msg[DATA] = value;
 	calculateChecksum(&req);
 
-#ifdef DEBUG
-	Serial.print("sent ------> ");
-	printFrame(&req);
-#endif
+	unsigned int start_time = millis();
 
 	putFrame(&req);
 	int n = 0;
@@ -124,20 +121,18 @@ bool Radar::setParam(byte control, byte command, byte value) {									 // curre
 		if (getFrame(&ret)) {
 			if (ret.msg[CONTROL] == control) {
 				if (ret.msg[COMMAND] == command || ret.msg[COMMAND] == INIT_COMPLETE) {
-#ifdef DEBUG
-					Serial.print("last line -> ");
-					printFrame(&ret);
-					Serial.println();
-#endif
 					return true;
 				}
 			}
-#ifdef DEBUG
-			Serial.print("received --> ");
-			printFrame(&ret);
-#endif
 			n = n + 1;
-			if (n > 20) return false;
+			if ((millis() - start_time >= 3000)) {
+				Serial.println("timed out waiting for correct response");
+				return false;
+			}
+			if (n > 20) {
+				Serial.println("20 frames without correct response");
+				return false;
+			}
 		}
 	}
 
@@ -160,12 +155,10 @@ byte Radar::getParam(byte control, byte command) {				// currently only works wi
 		.msg = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
 	};
 
+	unsigned int start_time = millis();
+
 	calculateChecksum(&req);
 
-#ifdef DEBUG
-	Serial.print("sent ------> ");
-	printFrame(&req);
-#endif
 
 	putFrame(&req);
 	int n = 0;
@@ -173,23 +166,20 @@ byte Radar::getParam(byte control, byte command) {				// currently only works wi
 		if (getFrame(&ret)) {
 			if (ret.msg[CONTROL] == control) {
 				if (ret.msg[COMMAND] == command) {
-#ifdef DEBUG
-					Serial.print("last line -> ");
-					printFrame(&ret);
-					Serial.println();
-#endif
 					return ret.msg[DATA];
 				}
 			}
-#ifdef DEBUG
-			Serial.print("received --> ");
-			printFrame(&ret);
-#endif
 			n = n + 1;
-			if (n > 10) return -1;
+			if ((millis() - start_time >= 3000)) {
+				Serial.println("timed out waiting for correct response");
+				return false;
+			}
+			if (n > 20) {
+				Serial.println("20 frames without correct response");
+				return false;
+			}
 		}
 	}
-
 }
 
 /*!
