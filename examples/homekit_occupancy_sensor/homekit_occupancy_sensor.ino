@@ -92,7 +92,7 @@ void setup() {
 	homeSpan.setLogLevel(1);
 	homeSpan.setStatusPin(STATUS_PIN);
 	homeSpan.setControlPin(CONTROL_PIN);
-	homeSpan.setPairingCode("11122333");
+	homeSpan.setPairingCode("08675309");
 	homeSpan.setQRID("WHAT");
 	homeSpan.enableOTA();
 
