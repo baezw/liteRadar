@@ -110,68 +110,29 @@ bool Radar::setParam(byte control, byte command, byte value) {									 // curre
 		.msg = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
 	};
 
+	unsigned long start, elapsed;
+
 	req.msg[DATA] = value;
 	calculateChecksum(&req);
 
-	unsigned int start_time = millis();
+	start = millis();
 
 	putFrame(&req);
-	int n = 0;
 	while (true) {
 		if (getFrame(&ret)) {
 			if (ret.msg[CONTROL] == control) {
 				if (ret.msg[COMMAND] == command || ret.msg[COMMAND] == INIT_COMPLETE) {
+					elapsed = millis() - start;
 					return true;
 				}
 			}
-			n = n + 1;
-			if ((millis() - start_time >= 2000)) {
-				Serial.println("timed out waiting for correct response");
+			elapsed = millis() - start;
+			if (elapsed >= 2000) {
 				return false;
 			}
 		}
 	}
 
-}
-
-/*!
- * @fn getParam
- * @brief contstructs a frame to requet a parameter value and returns it
- * @param control byte to hold control value
- * @param command byte to hold command specifiying parameter
- * @returns returns byte value of the parameter and or -1 if request failed
- */
-byte Radar::getParam(byte control, byte command) {				// currently only works with single byte data
-	Frame req {
-	.msg = {HEAD1, HEAD2, control, command, 0x00, 0x01, ZERO_F, 0x00, END1, END2},
-	.l = 10
-	};
-
-	Frame ret {
-		.msg = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
-	};
-
-	unsigned int start_time = millis();
-
-	calculateChecksum(&req);
-
-
-	putFrame(&req);
-	int n = 0;
-	while (true) {
-		if (getFrame(&ret)) {
-			if (ret.msg[CONTROL] == control) {
-				if (ret.msg[COMMAND] == command) {
-					return ret.msg[DATA];
-				}
-			}
-			n = n + 1;
-			if ((millis() - start_time >= 2000)) {
-				Serial.println("timed out waiting for correct response");
-				return false;
-			}
-		}
-	}
 }
 
 /*!
@@ -197,15 +158,6 @@ bool Radar::setScenario(byte scenario) {
 }
 
 /*!
- * @fn getScanario
- * @brief gets the current scenario value
- * @returns byte value on success, -1 on failure
- */
-byte Radar::getScenario() {
-	return getParam(WORKING_STATUS, GET_SCENARIO);
-}
-
-/*!
  * @fn setSensitvity
  * @brief sets the sensitivity used by the module
  * 		can be 1-3
@@ -213,15 +165,6 @@ byte Radar::getScenario() {
  */
 bool Radar::setSensitivity(byte scenario) {
 	return setParam(WORKING_STATUS, SET_SENSITIVITY, scenario);
-}
-
-/*!
- * @fn getSensitivity
- * @brief gets the current sensitivity value
- * @returns byte value on success, -1 on failure
- */
-byte Radar::getSensitivity() {
-	return getParam(WORKING_STATUS, GET_SENSITIVITY);
 }
 
 /*!
@@ -254,15 +197,6 @@ bool Radar::setPresenceThreshold(byte threshold) {
 }
 
 /*!
- * @fn getPresenceThreshold
- * @brief gets the current presence threshold value
- * @returns byte value on success, -1 on failure
- */
-byte Radar::getPresenceThreshold() {
-	return getParam(CUSTOM, GET_PRESENCE_THRESHOLD);
-}
-
-/*!
  * @fn setPresenceRange
  * @brief set presence range for the current custom mode
  * @param byte values from 0 (0m) to 0A (5m) are valid
@@ -273,16 +207,7 @@ bool Radar::setPresenceRange(byte range) {
 }
 
 /*!
- * @fn getPresenceRange
- * @brief gets the current presence range value
- * @returns values from 0 (0m) to 0A (5m) are valid, -1 on failure values from 0 (0m) to 0A (5m) are valid
- */
-byte Radar::getPresenceRange() {
-	return getParam(CUSTOM, GET_PRESENCE_RANGE);
-}
-
-/*!
- * @fn timeOfAbsence
+ * @fn setTimeOfAbsence
  * @brief set the time to wait before absence is reported
  * @param byte value between 0 and 08
  * @returns true for success, false for failed
@@ -292,16 +217,6 @@ bool Radar::setTimeOfAbsence(byte t) {
 }
 
 /*!
- * @fn getTimeOfAbsence
- * @brief gets the current time before absence is reported value
- * @returns byte value on success, -1 on failure
- */
-byte Radar::getTimeOfAbsence() {
-	return getParam(WORKING_STATUS, GET_TIME_OF_ABSENCE);
-}
-
-
-/*!
  * @fn setMotionThreshold
  * @brief set motion threshold for the current custom mode
  * @param byte value between 0 and 250
@@ -309,15 +224,6 @@ byte Radar::getTimeOfAbsence() {
  */
 bool Radar::setMotionThreshold(byte threshold){
 	return setParam(CUSTOM, SET_MOTION_THRESHOLD, threshold);
-}
-
-/*!
- * @fn getMotionThreshold
- * @brief gets the current motion threshold value
- * @returns byte value on success, -1 on failure
- */
-byte Radar::getMotionThreshold() {
-	return getParam(CUSTOM, GET_MOTION_THRESHOLD);
 }
 
 /*!
@@ -331,14 +237,6 @@ bool Radar::setMotionRange(byte range) {
 }
 
 /*!
- * @fn getMotionRange
- * @brief gets the current motion range value
- * @returns values from 0 (0m) to 0A (5m) are valid, -1 on failure values from 0 (0m) to 0A (5m) are valid
- */
-byte Radar::getMotionRange() {
-	return getParam(CUSTOM, GET_MOTION_RANGE);
-}
-/*!
  * @fn isPresent
  * @brief returns current state of presence
  * @returns true for presnce, false for absence
@@ -348,9 +246,9 @@ bool Radar::isPresent() {
 }
 
 /*!
- * @fn isPresent
- * @brief returns current state of presence
- * @returns true for presnce, false for absence
+ * @fn isMoving
+ * @brief returns current state of motion
+ * @returns true for motion, false for no motion
  */
 bool Radar::isMoving() {
 	if (motion == 0x02) return true;
