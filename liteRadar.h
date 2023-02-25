@@ -63,6 +63,8 @@
 #define ZERO_F						0x0F		// convienience
 #define INIT_COMPLETE				0x01		// init complete return command
 
+#define TIME_TO_WAIT				3000		// time to wait on a return frame match
+
 /*!
  * @struct		Frame
  * @param		msg		buffer to hold the frame
@@ -92,6 +94,7 @@ class Radar {
 		byte getParam(byte control, byte command);
 	public:
 		Radar(Stream *s);
+		void streamFrames(unsigned long t);
 		bool resetRadar();
 		bool setScenario(byte scenario);
 		byte getScenario();

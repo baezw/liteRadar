@@ -77,6 +77,24 @@ void Radar::putFrame(Frame* frame) {
 }
 
 /*!
+ * @fn streamFrames
+ * @brief gets a frame and prints it
+ */
+void Radar::streamFrames(unsigned long t) {
+	Frame frame;
+	unsigned long start = millis();
+	unsigned long elapsed = 0;
+	while (elapsed <= t) {
+		if (getFrame(&frame)) {
+			printFrame(&frame);
+		}
+		elapsed = millis() - start;
+
+	}
+	Serial.printf("times up... %lu\n", elapsed);
+}
+
+/*!
  * @fn calculateChecksum
  * @brief calculates the checksum and puts it into the frame
  * @param frame frame structure to be modified
@@ -113,25 +131,23 @@ bool Radar::setParam(byte control, byte command, byte value) {									 // curre
 	req.msg[DATA] = value;
 	calculateChecksum(&req);
 
-	unsigned int start_time = millis();
-
+	unsigned int start = millis();
+	unsigned int elapsed = 0;
 	putFrame(&req);
-	int n = 0;
-	while (true) {
+	while (true && elapsed < TIME_TO_WAIT) {
 		if (getFrame(&ret)) {
 			if (ret.msg[CONTROL] == control) {
-				if (ret.msg[COMMAND] == command || ret.msg[COMMAND] == INIT_COMPLETE) {
-					return true;
+				if (ret.msg[COMMAND] == command) {
+					if (ret.msg[DATA] == value) {
+						return true;
+					}
 				}
 			}
-			n = n + 1;
-			if ((millis() - start_time >= 2000)) {
-				Serial.println("timed out waiting for correct response");
-				return false;
-			}
 		}
+	elapsed = millis() - start;
 	}
-
+	Serial.printf("elapsed time = %lu\n", elapsed);
+	return false;
 }
 
 /*!
@@ -156,22 +172,21 @@ byte Radar::getParam(byte control, byte command) {				// currently only works wi
 	calculateChecksum(&req);
 
 
+	unsigned int start = millis();
+	unsigned int elapsed = 0;
+
 	putFrame(&req);
-	int n = 0;
-	while (true) {
+	while (true && elapsed < TIME_TO_WAIT) {
 		if (getFrame(&ret)) {
 			if (ret.msg[CONTROL] == control) {
 				if (ret.msg[COMMAND] == command) {
 					return ret.msg[DATA];
 				}
 			}
-			n = n + 1;
-			if ((millis() - start_time >= 2000)) {
-				Serial.println("timed out waiting for correct response");
-				return false;
-			}
 		}
+	elapsed = millis() - start;
 	}
+	return false;
 }
 
 /*!
@@ -288,7 +303,7 @@ byte Radar::getPresenceRange() {
  * @returns true for success, false for failed
  */
 bool Radar::setTimeOfAbsence(byte t) {
-	return setParam(WORKING_STATUS, SET_TIME_OF_ABSENCE, t);
+	return setParam(HUMAN_STATUS, SET_TIME_OF_ABSENCE, t);
 }
 
 /*!
@@ -297,7 +312,7 @@ bool Radar::setTimeOfAbsence(byte t) {
  * @returns byte value on success, -1 on failure
  */
 byte Radar::getTimeOfAbsence() {
-	return getParam(WORKING_STATUS, GET_TIME_OF_ABSENCE);
+	return getParam(HUMAN_STATUS, GET_TIME_OF_ABSENCE);
 }
 
 
