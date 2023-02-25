@@ -116,14 +116,11 @@ bool Radar::setParam(byte control, byte command, byte value) {			// currently on
 	unsigned long start = millis();
 
 	putFrame(&req);
-	printFrame(&req);
 	while (true) {
 		if (getFrame(&ret)) {
 			if (ret.msg[CONTROL] == control) {
 				if (ret.msg[COMMAND] == command) {
-					printFrame(&ret);
-					Serial.println();
-					return true;
+					if (ret.msg[DATA] == value) return true;
 				}
 			}
 			if ((millis()-start) >= 3000) {
