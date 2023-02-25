@@ -26,7 +26,6 @@
 
 #define SET_PRESENCE_THRESHOLD		0x08		// set presence threshold command
 #define SET_PRESENCE_RANGE			0x0A		// set range for presence detection
-#define SET_TIME_OF_ABSENCE			0x0A		//	set time of absence command
 #define SET_MOTION_THRESHOLD		0x09		// set motion threshold command
 #define SET_MOTION_RANGE			0x0B		// set range for motion detection
 #define SET_SENSITIVITY				0x08		// set sensitivity command
@@ -86,7 +85,6 @@ class Radar {
 		bool openCustomMode(byte mode);
 		bool exitCustomMode();
 		bool setPresenceThreshold(byte threshold);
-		bool setTimeOfAbsence(byte threshold);
 		bool setPresenceRange(byte range);
 		bool setMotionThreshold(byte threshold);
 		bool setMotionRange(byte range);

@@ -100,7 +100,7 @@ void Radar::calculateChecksum(Frame* frame) {
  * @param command byte to hold command specifiying parameter
  * @param value	byte to hold new value for parameter
  */
-bool Radar::setParam(byte control, byte command, byte value) {									 // currently only works with single byte data
+bool Radar::setParam(byte control, byte command, byte value) {			// currently only works with single byte data
 	Frame req {
 	.msg = {HEAD1, HEAD2, control, command, 0x00, 0x01, 0x00, 0x00, END1, END2},
 	.l = 10
@@ -110,29 +110,27 @@ bool Radar::setParam(byte control, byte command, byte value) {									 // curre
 		.msg = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
 	};
 
-	unsigned long start, elapsed;
-
 	req.msg[DATA] = value;
 	calculateChecksum(&req);
 
-	start = millis();
+	unsigned long start = millis();
 
 	putFrame(&req);
+	printFrame(&req);
 	while (true) {
 		if (getFrame(&ret)) {
 			if (ret.msg[CONTROL] == control) {
-				if (ret.msg[COMMAND] == command || ret.msg[COMMAND] == INIT_COMPLETE) {
-					elapsed = millis() - start;
+				if (ret.msg[COMMAND] == command) {
+					printFrame(&ret);
+					Serial.println();
 					return true;
 				}
 			}
-			elapsed = millis() - start;
-			if (elapsed >= 2000) {
+			if ((millis()-start) >= 3000) {
 				return false;
 			}
 		}
 	}
-
 }
 
 /*!
@@ -204,16 +202,6 @@ bool Radar::setPresenceThreshold(byte threshold) {
  */
 bool Radar::setPresenceRange(byte range) {
 	return setParam(CUSTOM, SET_PRESENCE_RANGE, range);
-}
-
-/*!
- * @fn setTimeOfAbsence
- * @brief set the time to wait before absence is reported
- * @param byte value between 0 and 08
- * @returns true for success, false for failed
- */
-bool Radar::setTimeOfAbsence(byte t) {
-	return setParam(WORKING_STATUS, SET_TIME_OF_ABSENCE, t);
 }
 
 /*!
