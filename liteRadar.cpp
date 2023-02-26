@@ -94,21 +94,91 @@ void Radar::streamFrames(unsigned long t) {
 	Serial.printf("times up... %lu\n", elapsed);
 }
 
-/*!
- * @fn calculateChecksum
- * @brief calculates the checksum and puts it into the frame
- * @param frame frame structure to be modified
- */
-void Radar::calculateChecksum(Frame* frame) {
 
-	byte checksum = 0;
-	int data_byte = frame->l - 4;
+/*! 
+ * @fn buildFrame()
+ * @brief constructs a frame to be sent to the radar
+ * @param control	unsigned char for the control byte
+ * @param command	unsigned chr for the command byte
+ * @param data_length number of data bytes
+ * @param the value to be sent
+ * @returns true if successful false if failed
+ * 
+ */
+
+bool Radar::buildFrame(Frame* frame, unsigned char control, unsigned char command, int data_length, int data) {
+	frame->l = 9 + data_length;
+	frame->msg[0] = HEAD1;
+	frame->msg[1] = HEAD2;
+	frame->msg[CONTROL] = control;
+	frame->msg[COMMAND] = command;
+	frame->msg[4] = (char)(data_length >> 8) & 0xFF;
+	frame->msg[5] = (char)data_length & 0xFF;;
+	if (data_length == 1) {
+		frame->msg[DATA] = (char)data & 0xFF;
+	}
+	else if (data_length == 2) {
+		frame->msg[DATA] = (char)(data >> 8) & 0xFF;
+		frame->msg[DATA+1] = data & 0xFF;
+	} else if (data_length == 4) {
+		frame->msg[DATA] = (char)(data >> 24) & 0xFF;
+		frame->msg[DATA+1] = (char)(data >> 16) & 0xFF;
+		frame->msg[DATA+2] = (char)(data >> 8) & 0xFF;
+		frame->msg[DATA+3] = data & 0xFF;
+	} else return false;
+	unsigned char checksum = 0;
 	int cs_byte = frame->l - 3;
 	for (int i = 0; i < cs_byte; i++) {
 		checksum = checksum + frame->msg[i];
 	}
 	frame->msg[cs_byte] = checksum;
+	frame->msg[frame->l - 2] = END1;
+	frame->msg[frame->l - 1] = END2;
+	frame->msg[frame->l] = 0X00;
+
+	return true;
 }
+
+/*!
+ * @fn validateFrame
+ * @brief validates a frame by checking expected control, command and checksums and if successful
+ * 		returns the valuie from the frame. 
+ * @param control	the expected control int he frame
+ * @param command the expected command in the frame
+ * @returns if successful returns value from the frame. If failed returns -1 for bad control match
+ * 		-2 for bad command match and -3 for checksum failure, -4 is for bad data length
+ * 
+ */
+
+int Radar::validateFrame(Frame* frame, byte control, byte command) {
+	byte checksum = 0;
+	int cs_byte = frame->l - 3;
+	int v = -4;
+
+	if (frame->msg[CONTROL] != control) return -1;	// command did not match
+	if (frame->msg[COMMAND] != command) return -2;	// control did not match
+	for (int i = 0; i < cs_byte; i++) {
+		checksum = checksum + frame->msg[i];
+	}
+	if (checksum != frame->msg[cs_byte]) return -3;	// checksum failed
+	int data_length = frame->l - 9;
+	if (data_length == 1) {
+		v = (int)frame->msg[DATA];
+	} else if (data_length == 2) {
+		v = (int)(frame->msg[DATA] << 8);
+		v = v + (int)(frame->msg[DATA+1]);
+		return v;
+	} else if (data_length == 4) {
+		v = (int)(frame->msg[DATA] << 24);
+		v = v + (int)(frame->msg[DATA+1] << 16);
+		v = v + (int)(frame->msg[DATA+2] << 8);
+		v = v + (int)(frame->msg[DATA+3]);
+		return v;
+	}
+	return v; // unexpected data length
+}
+
+
 
 /*!
  * @fn setParam
@@ -118,35 +188,29 @@ void Radar::calculateChecksum(Frame* frame) {
  * @param command byte to hold command specifiying parameter
  * @param value	byte to hold new value for parameter
  */
-bool Radar::setParam(byte control, byte command, byte value) {									 // currently only works with single byte data
-	Frame req {
-	.msg = {HEAD1, HEAD2, control, command, 0x00, 0x01, 0x00, 0x00, END1, END2},
-	.l = 10
-	};
+bool Radar::setParam(byte control, byte command, int value) {									 // currently only works with single byte data
+	Frame req;
+	Frame ret;
 
-	Frame ret {
-		.msg = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
-	};
+	// figure out the number of data bytes from the control and command
+	int data_length = 1;								// just 1 byte for now
 
-	req.msg[DATA] = value;
-	calculateChecksum(&req);
-
-	unsigned int start = millis();
-	unsigned int elapsed = 0;
-	putFrame(&req);
-	while (true && elapsed < TIME_TO_WAIT) {
-		if (getFrame(&ret)) {
-			if (ret.msg[CONTROL] == control) {
-				if (ret.msg[COMMAND] == command) {
-					if (ret.msg[DATA] == value) {
-						return true;
-					}
+	// printFrame(&req);
+	if (buildFrame(&req, control, command, data_length, value)) {
+			unsigned int start = millis();
+			unsigned int elapsed = 0;
+			putFrame(&req);
+			while (true && elapsed < TIME_TO_WAIT) {
+				if (getFrame(&ret)) {
+					// printFrame(&ret);
+					int v = validateFrame(&ret, control, command);
+					if (v == value) return v;
 				}
+			elapsed = millis() - start;
 			}
-		}
-	elapsed = millis() - start;
+			Serial.printf("elapsed time = %lu\n", elapsed);
+			return false;
 	}
-	Serial.printf("elapsed time = %lu\n", elapsed);
 	return false;
 }
 
@@ -157,36 +221,25 @@ bool Radar::setParam(byte control, byte command, byte value) {									 // curre
  * @param command byte to hold command specifiying parameter
  * @returns returns byte value of the parameter and or -1 if request failed
  */
-byte Radar::getParam(byte control, byte command) {				// currently only works with single byte data
-	Frame req {
-	.msg = {HEAD1, HEAD2, control, command, 0x00, 0x01, ZERO_F, 0x00, END1, END2},
-	.l = 10
-	};
+int Radar::getParam(byte control, byte command) {				// currently only works with single byte data
+	Frame req;
+	Frame ret;
 
-	Frame ret {
-		.msg = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
-	};
+	// figure out the number of data bytes from the control and command
+	int data_length = 1;								// just 1 byte for now
 
-	unsigned int start_time = millis();
-
-	calculateChecksum(&req);
-
-
-	unsigned int start = millis();
-	unsigned int elapsed = 0;
-
-	putFrame(&req);
-	while (true && elapsed < TIME_TO_WAIT) {
-		if (getFrame(&ret)) {
-			if (ret.msg[CONTROL] == control) {
-				if (ret.msg[COMMAND] == command) {
-					return ret.msg[DATA];
-				}
+	if (buildFrame(&req, control, command, data_length, 0xFF)) {
+		unsigned int start = millis();
+		unsigned int elapsed = 0;
+		putFrame(&req);
+		while (true && elapsed < TIME_TO_WAIT) {
+			if (getFrame(&ret)) {
+				return validateFrame(&ret, control, command);
 			}
+		elapsed = millis() - start;
 		}
-	elapsed = millis() - start;
-	}
 	return false;
+	}
 }
 
 /*!
@@ -196,7 +249,7 @@ byte Radar::getParam(byte control, byte command) {				// currently only works wi
  * @returns
  */
 bool Radar::resetRadar() {
-	return setParam(SYSTEM, RESET, ZERO_F);
+	return setParam(SYSTEM, RESET, 0xFF);
 }
 
 /*!
@@ -255,7 +308,7 @@ bool Radar::openCustomMode(byte mode) {
  * @returns true if success, false if failed
  */
 bool Radar::exitCustomMode() {
-	return setParam(WORKING_STATUS, EXIT_CUSTOM, ZERO_F);
+	return setParam(WORKING_STATUS, EXIT_CUSTOM, 0xFF);
 }
 
 /*!

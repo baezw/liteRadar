@@ -60,7 +60,6 @@
 #define POSITION_EVENT				0x0B 		// report on position
 
 #define RESET						0x02		//reset command
-#define ZERO_F						0x0F		// convienience
 #define INIT_COMPLETE				0x01		// init complete return command
 
 #define TIME_TO_WAIT				3000		// time to wait on a return frame match
@@ -89,9 +88,10 @@ class Radar {
 		void putFrame(Frame* frame);
 		bool getFrame(Frame* frame);
 		void printFrame(Frame* frame);
-		void calculateChecksum(Frame* frame);
-		bool setParam(byte control, byte command, byte value);
-		byte getParam(byte control, byte command);
+		bool buildFrame(Frame* frame, byte control, byte command, int data_length, int value);
+		int	validateFrame(Frame* frame, byte control, byte command);
+		bool setParam(byte control, byte command, int value);
+		int getParam(byte control, byte command);
 	public:
 		Radar(Stream *s);
 		void streamFrames(unsigned long t);
