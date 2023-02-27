@@ -52,7 +52,7 @@ unsigned int Radar::getDataLength(byte control, byte command) {
 					return 4;
 					break;
 				default:
-					return 4;
+					return 1;
 					break;
 			}
 		default:
