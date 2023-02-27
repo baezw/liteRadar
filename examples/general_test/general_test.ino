@@ -45,13 +45,17 @@ void setup() {
     if(!radar.openCustomMode(MODE_1)) Serial.println("open custom mode failed");
     else Serial.println("open custom mode succeeds");
 
-    if (!radar.setPresenceThreshold(0x1E)) Serial.println("set presence threshold failed");
+    if (!radar.setPresenceThreshold((unsigned int)0x1E)) Serial.println("set presence threshold failed");
     else Serial.println("set presence threshold succeeds");
     Serial.printf("current presence threshold = %02X\n", radar.getPresenceThreshold());
 
-    if (!radar.setPresenceRange(0x09)) Serial.println("set presence range failed");
+    if (!radar.setPresenceRange((unsigned int)0x09)) Serial.println("set presence range failed");
     else Serial.println("set presence range succeeds");
     Serial.printf("current presence range = %02X\n", radar.getPresenceRange());
+
+    if (!radar.setStationaryValidTime(10000)) Serial.println("set stationary valid time failed");
+    else Serial.println("set stationary valid time succeeds");
+    Serial.printf("current stationary valid time = %d\n", radar.getStationaryValidTime());
 
     if (!radar.setMotionThreshold(0x0E)) Serial.println("set presence threshold failed");
     else Serial.println("set motion threshold succeeds");
@@ -60,6 +64,10 @@ void setup() {
     if (!radar.setMotionRange(0x09)) Serial.println("set motion range failed");
     else Serial.println("set motion range succeeds");
     Serial.printf("current motion range = %02X\n", radar.getMotionRange());
+
+    if (!radar.setMotionValidTime(4000)) Serial.println("set motion valid time failed");
+    else Serial.println("set motion valid time succeeds");
+    Serial.printf("current motion valid time = %d\n", radar.getMotionValidTime());
 
     if(!radar.exitCustomMode()) Serial.println("exit custom mode failed");
     else Serial.println("exit custom mode succeeds");

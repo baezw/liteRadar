@@ -12,18 +12,22 @@ This is a driver library for the 24GHz Seeed Human Static Presence Lite mmWave s
 | byte getScenario(); | returns the current scenario in use. |
 | bool setSensitivity(byte sensitivity); | sets the sensitivity to use with the built in model. range 0 - 3 |
 | byte getSensitivity(); | returns the current sensitvity setting. |
+| byte getTimeOfAbsence(); | returns the current wait time before reporting absence. See Users Manual for values. |
+| bool setTimeOfAbsence(byte threshold); | sets the time to wait wihtout presence before reporting absence. See Users Manual for values. returns true if successful |
 | bool openCustomMode(byte mode); | opens custom mode. mode specifies the mode to use range 1-4. returns true if success |
 | bool exitCustomMode(); | Saves parameters into the open custom mode and exits. It appears that these prameters remain in use until on of the built-in scenarios is set. |
 | bool setPresenceThreshold(byte threshold); | sets the threshold for presence detection. range 0-250 returns true if successful |
 | byte getPresenceThreshold(); | returns the current presence threshold value range 0-250  |
-| bool setTimeOfAbsence(byte threshold); | sets the time to wait wihtout presence before reporting absence. See Users Manual for values. returns true if successful |
-| byte getTimeOfAbsence(); | returns the current wait time before reporting absence. See Users Manual for values. |
 | bool setPresenceRange(byte range); | sets the range for presence detection. see Users Manual for values. returns true if successful. |
 | byte getPresenceRange(); | returns the current range for presence detection . see Users Manual for values. |
 | bool setMotionThreshold(byte threshold); | sets the threshold for motion detection. see Users Manual for values. returns true if successful. |
 | byte getMotionThreshold(); | returns the current threshold for motion detection . see Users Manual for values. |
 | bool setMotionRange(byte range); | sets the range for motion detection. see Users Manual for values. returns true if successful. |
 | byte getMotionRange(); | returns the range for motion detection. see Users Manual for values. |
+|bool setStationaryValidTime(unsigned int t); | sets time to wait before changing presence status |
+|int getStationaryValidTime(); | gets time to wait before changing presence status |
+|bool setMotionValidTime(unsigned int t); | sets time to wait before changing motion status |
+|int getMotionValidTime(); | gets time to wait before changing motion status |
 | bool updateStatus(); | this is the function to be placed in a loop to check for messages and update values |
 | bool isPresent(); | returns true for present, false for absent after time of absence delay |
 | bool isMoving(); | returns true for motion, false for no motion |

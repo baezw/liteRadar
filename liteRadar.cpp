@@ -16,6 +16,52 @@ Radar::Radar(Stream *s)
 }
 
 /*!
+ * @fn getDataLength(byte control, byte command) 
+ * @brief command to get the data length of a particular control command combination
+ * @param control  	control byte
+ * @param command	command byte
+ * @returns number of data bytes for the control command combination
+ */
+
+unsigned int Radar::getDataLength(byte control, byte command) {
+	switch (control) {
+		case WORKING_STATUS_RANGE:
+			switch(command) {
+				case GET_MAX_ACTIVE_RANGE:
+					return 1;
+					break;
+				case GET_MAX_STATIONARY_RANGE:
+					return 1;
+					break;
+				default:
+					return 2;
+					break;
+			}
+		case CUSTOM:
+			switch(command) {
+				case GET_MOTION_VALID_TIME:
+					return 4;
+					break;
+				case GET_STATIONARY_VALID_TIME:
+					return 4;
+					break;
+				case SET_MOTION_VALID_TIME:
+					return 4;
+					break;
+				case SET_STATIONARY_VALID_TIME:
+					return 4;
+					break;
+				default:
+					return 4;
+					break;
+			}
+		default:
+			return 1;
+			break;
+	}
+}
+
+/*!
  * @fn getFrame
  * @brief reads a frame from the radar module
  * @param frame frame structure to hold returned data and length read
@@ -94,19 +140,37 @@ void Radar::streamFrames(unsigned long t) {
 	Serial.printf("times up... %lu\n", elapsed);
 }
 
-
-/*! 
- * @fn buildFrame()
- * @brief constructs a frame to be sent to the radar
- * @param control	unsigned char for the control byte
- * @param command	unsigned chr for the command byte
- * @param data_length number of data bytes
- * @param the value to be sent
- * @returns true if successful false if failed
- * 
+/*!
+ * @fn char_to_int
+ * @brief convert a 4 byte character string and  to unsigned int
+ * @param data   4 byte char string ordered big endian
+ * @returns unsigned int
  */
+unsigned int Radar::char_to_int(unsigned char* data) {
+	unsigned int v;
 
-bool Radar::buildFrame(Frame* frame, unsigned char control, unsigned char command, int data_length, int data) {
+	v = (unsigned int)(data[0] << 24);
+	v = v + (unsigned int)(data[1] << 16);
+	v = v + (unsigned int)(data[2] << 8);
+	v = v + (unsigned int)(data[3]);
+	return v;
+}
+
+/*!
+ * @fn int_to_char
+ * @brief  converts unsigned int to 4 byte char
+ * @param data 4 byte chr string
+ * @param i unsigned int 
+ * @returns 4 byte char*
+ */
+void Radar::int_to_char(unsigned char* data, unsigned int i) {
+	data[0] = (char)(i >> 24) & 0xFF;
+	data[1] = (char)(i >> 16) & 0xFF;
+	data[2] = (char)(i >> 8) & 0xFF;
+	data[3] = (char)i & 0xFF;
+}
+
+bool Radar::buildFrame(Frame* frame, unsigned char control, unsigned char command, unsigned int data_length, unsigned char* data) {
 	frame->l = 9 + data_length;
 	frame->msg[0] = HEAD1;
 	frame->msg[1] = HEAD2;
@@ -115,16 +179,16 @@ bool Radar::buildFrame(Frame* frame, unsigned char control, unsigned char comman
 	frame->msg[4] = (char)(data_length >> 8) & 0xFF;
 	frame->msg[5] = (char)data_length & 0xFF;;
 	if (data_length == 1) {
-		frame->msg[DATA] = (char)data & 0xFF;
+		frame->msg[DATA] = data[3];
 	}
 	else if (data_length == 2) {
-		frame->msg[DATA] = (char)(data >> 8) & 0xFF;
-		frame->msg[DATA+1] = data & 0xFF;
+		frame->msg[DATA] = data[2];
+		frame->msg[DATA+1] = data[3];
 	} else if (data_length == 4) {
-		frame->msg[DATA] = (char)(data >> 24) & 0xFF;
-		frame->msg[DATA+1] = (char)(data >> 16) & 0xFF;
-		frame->msg[DATA+2] = (char)(data >> 8) & 0xFF;
-		frame->msg[DATA+3] = data & 0xFF;
+		frame->msg[DATA] = data[0];
+		frame->msg[DATA+1] = data[1];
+		frame->msg[DATA+2] = data[2];
+		frame->msg[DATA+3] = data[3];
 	} else return false;
 	unsigned char checksum = 0;
 	int cs_byte = frame->l - 3;
@@ -145,37 +209,36 @@ bool Radar::buildFrame(Frame* frame, unsigned char control, unsigned char comman
  * 		returns the valuie from the frame. 
  * @param control	the expected control int he frame
  * @param command the expected command in the frame
+ * @param data expected data
+ * @param check_data if true check to see if the data matches what is expected
  * @returns if successful returns value from the frame. If failed returns -1 for bad control match
  * 		-2 for bad command match and -3 for checksum failure, -4 is for bad data length
  * 
  */
 
-int Radar::validateFrame(Frame* frame, byte control, byte command) {
+bool Radar::validateFrame(Frame* frame, byte control, byte command, unsigned char* data, bool check_data) {
 	byte checksum = 0;
-	int cs_byte = frame->l - 3;
-	int v = -4;
-
-	if (frame->msg[CONTROL] != control) return -1;	// command did not match
-	if (frame->msg[COMMAND] != command) return -2;	// control did not match
+	unsigned int cs_byte = frame->l - 3;
+	int data_length = frame->l - 9;
+	if (frame->msg[CONTROL] != control) return false;	// command did not match
+	if (frame->msg[COMMAND] != command) return false;	// control did not match
 	for (int i = 0; i < cs_byte; i++) {
 		checksum = checksum + frame->msg[i];
 	}
-	if (checksum != frame->msg[cs_byte]) return -3;	// checksum failed
-	int data_length = frame->l - 9;
+	if (checksum != frame->msg[cs_byte]) return false;	// checksum failed
+	if(!check_data) return true;
 	if (data_length == 1) {
-		v = (int)frame->msg[DATA];
+		if (frame->msg[DATA] != data [3]) return false;
 	} else if (data_length == 2) {
-		v = (int)(frame->msg[DATA] << 8);
-		v = v + (int)(frame->msg[DATA+1]);
-		return v;
+		if (frame->msg[DATA] != data[2]) return false;
+		if (frame->msg[DATA+1] != data[3]) return false;
 	} else if (data_length == 4) {
-		v = (int)(frame->msg[DATA] << 24);
-		v = v + (int)(frame->msg[DATA+1] << 16);
-		v = v + (int)(frame->msg[DATA+2] << 8);
-		v = v + (int)(frame->msg[DATA+3]);
-		return v;
-	}
-	return v; // unexpected data length
+		if (frame->msg[DATA] != data[0]) return false;
+		if (frame->msg[DATA+1] != data[1]) return false;
+		if (frame->msg[DATA+2] != data[2]) return false;
+		if (frame->msg[DATA+3] != data[3]) return false;
+	} else return false; // unexpected data length
+	return true; 
 }
 
 
@@ -186,29 +249,22 @@ int Radar::validateFrame(Frame* frame, byte control, byte command) {
  * 		frames to see if the correct response is received
  * @param control byte to hold control value
  * @param command byte to hold command specifiying parameter
- * @param value	byte to hold new value for parameter
+ * @param data	 data to be sent
  */
-bool Radar::setParam(byte control, byte command, int value) {									 // currently only works with single byte data
+bool Radar::setParam(byte control, byte command, unsigned char* data) {									 // currently only works with single byte data
 	Frame req;
 	Frame ret;
-
-	// figure out the number of data bytes from the control and command
-	int data_length = 1;								// just 1 byte for now
-
-	// printFrame(&req);
-	if (buildFrame(&req, control, command, data_length, value)) {
-			unsigned int start = millis();
-			unsigned int elapsed = 0;
+	unsigned int data_length = getDataLength(control, command);
+	if (buildFrame(&req, control, command, data_length, data)) {
+			unsigned long start = millis();
+			unsigned long elapsed = 0;
 			putFrame(&req);
 			while (true && elapsed < TIME_TO_WAIT) {
 				if (getFrame(&ret)) {
-					// printFrame(&ret);
-					int v = validateFrame(&ret, control, command);
-					if (v == value) return v;
+					if (validateFrame(&ret, control, command, data, true)) return true;
 				}
 			elapsed = millis() - start;
 			}
-			Serial.printf("elapsed time = %lu\n", elapsed);
 			return false;
 	}
 	return false;
@@ -219,22 +275,44 @@ bool Radar::setParam(byte control, byte command, int value) {									 // curren
  * @brief contstructs a frame to requet a parameter value and returns it
  * @param control byte to hold control value
  * @param command byte to hold command specifiying parameter
+ * @param data char array to receive the data
  * @returns returns byte value of the parameter and or -1 if request failed
  */
-int Radar::getParam(byte control, byte command) {				// currently only works with single byte data
+bool Radar::getParam(byte control, byte command, unsigned char* data) {				// currently only works with single byte data
 	Frame req;
 	Frame ret;
 
-	// figure out the number of data bytes from the control and command
-	int data_length = 1;								// just 1 byte for now
-
-	if (buildFrame(&req, control, command, data_length, 0xFF)) {
-		unsigned int start = millis();
-		unsigned int elapsed = 0;
+	int data_length = getDataLength(control, command);
+	if (buildFrame(&req, control, command, data_length, data)) {
+		unsigned long start = millis();
+		unsigned long elapsed = 0;
 		putFrame(&req);
 		while (true && elapsed < TIME_TO_WAIT) {
 			if (getFrame(&ret)) {
-				return validateFrame(&ret, control, command);
+				if (validateFrame(&ret, control, command, data, false)) {
+					data_length = ret.l - 9;
+					if (data_length == 1 ) {
+						data[0] = 0x00;
+						data[1] = 0x00;
+						data[2] = 0x00;
+						data[3] = ret.msg[DATA];
+						return true;
+					} else if (data_length == 2) {
+						data[0] = 0x00;
+						data[1] = 0x00;
+						data[2] = ret.msg[DATA];
+						data[3] = ret.msg[DATA+1];
+						return true;
+					} else if (data_length == 4) {
+						data[0] = ret.msg[DATA];
+						data[1] = ret.msg[DATA+1];
+						data[2] = ret.msg[DATA+2];
+						data[3] = ret.msg[DATA+3];
+						return true;
+					}
+				} 
+				return false;
+
 			}
 		elapsed = millis() - start;
 		}
@@ -249,7 +327,8 @@ int Radar::getParam(byte control, byte command) {				// currently only works wit
  * @returns
  */
 bool Radar::resetRadar() {
-	return setParam(SYSTEM, RESET, 0xFF);
+	unsigned char data[] = {0x00, 0x00, 0x00, 0x0F};
+	return setParam(SYSTEM, RESET, data);
 }
 
 /*!
@@ -261,7 +340,8 @@ bool Radar::resetRadar() {
  * @returns true on success, false if failed
  */
 bool Radar::setScenario(byte scenario) {
-	return setParam(WORKING_STATUS, SET_SCENARIO, scenario);
+	unsigned char data[] = {0x00, 0x00, 0x00, scenario};
+	return setParam(WORKING_STATUS, SET_SCENARIO, data);
 }
 
 /*!
@@ -270,7 +350,10 @@ bool Radar::setScenario(byte scenario) {
  * @returns byte value on success, -1 on failure
  */
 byte Radar::getScenario() {
-	return getParam(WORKING_STATUS, GET_SCENARIO);
+	unsigned char data[] = {0x00, 0x00, 0x00, 0x0F};
+	if (getParam(WORKING_STATUS, GET_SCENARIO, data)) {
+		return data[3];
+	}
 }
 
 /*!
@@ -279,27 +362,55 @@ byte Radar::getScenario() {
  * 		can be 1-3
  * @returns true on success, false if failed
  */
-bool Radar::setSensitivity(byte scenario) {
-	return setParam(WORKING_STATUS, SET_SENSITIVITY, scenario);
+bool Radar::setSensitivity(byte s) {
+	unsigned char data[] = {0x00, 0x00, 0x00, s};
+	return setParam(WORKING_STATUS, SET_SENSITIVITY, data);
 }
 
 /*!
  * @fn getSensitivity
  * @brief gets the current sensitivity value
- * @returns byte value on success, -1 on failure
+ * @returns unsigned int value on success, -1 on failure
  */
 byte Radar::getSensitivity() {
-	return getParam(WORKING_STATUS, GET_SENSITIVITY);
+	unsigned char data[] = {0x00, 0x00, 0x00, 0x0F};
+	if (getParam(WORKING_STATUS, GET_SENSITIVITY, data)) {
+		return data[3];
+	}
+}
+
+/*!
+ * @fn timeOfAbsence
+ * @brief set the time to wait before absence is reported
+ * @param unsigned int value between 0 and 08
+ * @returns true for success, false for failed
+ */
+bool Radar::setTimeOfAbsence(byte t) {
+	unsigned char data[] = {0x00, 0x00, 0x00, t};
+	return setParam(HUMAN_STATUS, SET_TIME_OF_ABSENCE, data);
+}
+
+/*!
+ * @fn getTimeOfAbsence
+ * @brief gets the current time before absence is reported value
+ * @returns unsigned int value on success, -1 on failure
+ */
+byte Radar::getTimeOfAbsence() {
+	unsigned char data[] = {0x00, 0x00, 0x00, 0x0F};
+	if (getParam(HUMAN_STATUS, GET_TIME_OF_ABSENCE, data)) {
+		return data[3];
+	}
 }
 
 /*!
  * @fn openCustomMode
  * @brief opens custom mode to allow more control of module settings
- * @param mode byte value 1-4
+ * @param mode unsigned int value 1-4
  * @returns true if success, false if failed
  */
 bool Radar::openCustomMode(byte mode) {
-	return setParam(WORKING_STATUS, OPEN_CUSTOM, mode);
+	unsigned char data[] = {0x00, 0x00, 0x00, mode};
+	return setParam(WORKING_STATUS, OPEN_CUSTOM, data);
 }
 
 /*!
@@ -308,36 +419,42 @@ bool Radar::openCustomMode(byte mode) {
  * @returns true if success, false if failed
  */
 bool Radar::exitCustomMode() {
-	return setParam(WORKING_STATUS, EXIT_CUSTOM, 0xFF);
+	unsigned char data[] = {0x00, 0x00, 0x00, 0x0F};
+	return setParam(WORKING_STATUS, EXIT_CUSTOM, data);
 }
 
 /*!
  * @fn setPresenceThreshold
  * @brief set presence threshold for the current custom mode
- * @param byte value between 0 and 250
+ * @param unsigned int value between 0 and 250
  * @returns true for success, false for failed
  */
 bool Radar::setPresenceThreshold(byte threshold) {
-	return setParam(CUSTOM, SET_PRESENCE_THRESHOLD, threshold);
+	unsigned char data[] = {0x00, 0x00, 0x00, threshold};
+	return setParam(CUSTOM, SET_PRESENCE_THRESHOLD, data);
 }
 
 /*!
  * @fn getPresenceThreshold
  * @brief gets the current presence threshold value
- * @returns byte value on success, -1 on failure
+ * @returns unsigned int value on success, -1 on failure
  */
 byte Radar::getPresenceThreshold() {
-	return getParam(CUSTOM, GET_PRESENCE_THRESHOLD);
+	unsigned char data[] = {0x00, 0x00, 0x00, 0x0F};
+	if (getParam(CUSTOM, GET_PRESENCE_THRESHOLD, data)) {
+		return data[3];
+	}
 }
 
 /*!
  * @fn setPresenceRange
  * @brief set presence range for the current custom mode
- * @param byte values from 0 (0m) to 0A (5m) are valid
+ * @param unsigned int values from 0 (0m) to 0A (5m) are valid
  * @returns true for success, false for failed
  */
 bool Radar::setPresenceRange(byte range) {
-	return setParam(CUSTOM, SET_PRESENCE_RANGE, range);
+	unsigned char data[] = {0x00, 0x00, 0x00, range};
+	return setParam(CUSTOM, SET_PRESENCE_RANGE, data);
 }
 
 /*!
@@ -346,56 +463,69 @@ bool Radar::setPresenceRange(byte range) {
  * @returns values from 0 (0m) to 0A (5m) are valid, -1 on failure values from 0 (0m) to 0A (5m) are valid
  */
 byte Radar::getPresenceRange() {
-	return getParam(CUSTOM, GET_PRESENCE_RANGE);
+	unsigned char data[] = {0x00, 0x00, 0x00, 0x0F};
+	if (getParam(CUSTOM, GET_PRESENCE_RANGE, data)) {
+		return data[3];
+	}
 }
 
 /*!
- * @fn timeOfAbsence
- * @brief set the time to wait before absence is reported
- * @param byte value between 0 and 08
+ * @fn setStationaryValidTime
+ * @brief set presence range for the current custom mode
+ * @param unsigned int values in ms
  * @returns true for success, false for failed
  */
-bool Radar::setTimeOfAbsence(byte t) {
-	return setParam(HUMAN_STATUS, SET_TIME_OF_ABSENCE, t);
+bool Radar::setStationaryValidTime(unsigned int t) {
+	unsigned char data[] = {0x00, 0x00, 0x00, 0x0F};
+	int_to_char(data, t);
+	return setParam(CUSTOM, SET_STATIONARY_VALID_TIME, data);
 }
 
 /*!
- * @fn getTimeOfAbsence
- * @brief gets the current time before absence is reported value
- * @returns byte value on success, -1 on failure
+ * @fn getStationaryValidTime
+ * @brief gets the current stationary valid time value
+ * @returns values in ms -1 on failure 
  */
-byte Radar::getTimeOfAbsence() {
-	return getParam(HUMAN_STATUS, GET_TIME_OF_ABSENCE);
+unsigned int Radar::getStationaryValidTime() {
+	unsigned char data[] = {0x00, 0x00, 0x00, 0x0F};
+	if (getParam(CUSTOM, GET_STATIONARY_VALID_TIME, data)) {
+		int i = char_to_int(data);
+		return i;
+	}
 }
-
 
 /*!
  * @fn setMotionThreshold
  * @brief set motion threshold for the current custom mode
- * @param byte value between 0 and 250
+ * @param unsigned int value between 0 and 250
  * @returns true for success, false for failed
  */
 bool Radar::setMotionThreshold(byte threshold){
-	return setParam(CUSTOM, SET_MOTION_THRESHOLD, threshold);
+	unsigned char data[] = {0x00, 0x00, 0x00, threshold};
+	return setParam(CUSTOM, SET_MOTION_THRESHOLD, data);
 }
 
 /*!
  * @fn getMotionThreshold
  * @brief gets the current motion threshold value
- * @returns byte value on success, -1 on failure
+ * @returns unsigned int value on success, -1 on failure
  */
 byte Radar::getMotionThreshold() {
-	return getParam(CUSTOM, GET_MOTION_THRESHOLD);
+	unsigned char data[] = {0x00, 0x00, 0x00, 0x0F};
+	if (getParam(CUSTOM, GET_MOTION_THRESHOLD, data)) {
+		return data[3];
+	}
 }
 
 /*!
  * @fn setMotionRange
  * @brief set motion range for the current custom mode
- * @param byte values from 0 (0m) to 0A (5m) are valid
+ * @param unsigned int values from 0 (0m) to 0A (5m) are valid
  * @returns true for success, false for failed
  */
 bool Radar::setMotionRange(byte range) {
-	return setParam(CUSTOM, SET_MOTION_RANGE, range);
+	unsigned char data[] = {0x00, 0x00, 0x00, range};
+	return setParam(CUSTOM, SET_MOTION_RANGE, data);
 }
 
 /*!
@@ -404,8 +534,36 @@ bool Radar::setMotionRange(byte range) {
  * @returns values from 0 (0m) to 0A (5m) are valid, -1 on failure values from 0 (0m) to 0A (5m) are valid
  */
 byte Radar::getMotionRange() {
-	return getParam(CUSTOM, GET_MOTION_RANGE);
+	unsigned char data[] = {0x00, 0x00, 0x00, 0x0F};
+	if (getParam(CUSTOM, GET_MOTION_RANGE, data)) {
+		return data[3];
+	}
 }
+
+/*!
+ * @fn setMotionValidTime
+ * @brief set presence range for the current custom mode
+ * @param unsigned int values in ms
+ * @returns true for success, false for failed
+ */
+bool Radar::setMotionValidTime(unsigned int t) {
+	unsigned char data[] = {0x00, 0x00, 0x00, 0x0F};
+	int_to_char(data, t);
+	return (setParam(CUSTOM, SET_MOTION_VALID_TIME, data));
+}
+
+/*!
+ * @fn getMotionValidTime
+ * @brief gets the current stationary valid time value
+ * @returns values in ms -1 on failure 
+ */
+unsigned int Radar::getMotionValidTime() {
+	unsigned char data[] = {0x00, 0x00, 0x00, 0x0F};
+	if (getParam(CUSTOM, GET_MOTION_VALID_TIME, data)) {
+		return char_to_int(data);
+	}
+}
+
 /*!
  * @fn isPresent
  * @brief returns current state of presence
