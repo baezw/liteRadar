@@ -2,11 +2,19 @@
 
 This is a driver library for the 24GHz Seeed Human Static Presence Lite mmWave sensor module. It is intended to be simple to use and oriented toward writing sensors for home automation. It is <em>not</em> intended to provide sophisticated access to underlying data from the module, just allow you to set some parameters and get both presence and motion detection done using the UART interface.
 
+
+### Notes
+
+- This library will fail completely if the module has underlying data open. I used the Windows software to look at the underlyting data flows and exited the application without closing the data flow. The module remembers status of all of the parameters through power cycles including undeying data status. I have not found a way to factory reset the thing yet.
+- The way this library is written set/get parameter commands watch return frames for a specified period of time and looks for the matching return frame. I thought that a successfull command indication was more important than a few discarded packets. Since the purpose is to use in sensors, that setup stuff happens at startup and before the radar is even warmed up. If you use these function is a time critical loop, there may be problems.
+- *Fair warning* I am not sure about much about how this module works, so no promises
+
+
+
 ### Functions
 
-
 | **Function** | **Description** |
-| ------------------------ | -------------|
+| -------------------------------- | -------------|
 | bool resetRadar(); | resets the radar module. Note that this does not appear to eliminate any parameters saveed, but reloads the settings. This appears to be necessary occassionally. returns true on success. |
 | bool setScenario(byte scenario); | sets the built-in scenario model to use. presets are: living room, area detection, bedroom and bathroom. returns true if successful. |
 | byte getScenario(); | returns the current scenario in use. |
