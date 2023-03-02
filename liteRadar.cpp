@@ -137,7 +137,6 @@ void Radar::streamFrames(unsigned long t) {
 		elapsed = millis() - start;
 
 	}
-	Serial.printf("times up... %lu\n", elapsed);
 }
 
 /*!
