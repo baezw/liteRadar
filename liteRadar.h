@@ -53,10 +53,12 @@
 #define GET_MOTION_THRESHOLD		0x89		// get motion threshold command
 #define SET_MOTION_RANGE			0x0B		// set range for motion detection
 #define GET_MOTION_RANGE			0x8B		// get range for motion detection
-#define SET_MOTION_VALID_TIME		0x0C		// set how long to wait before changing motions status
-#define GET_MOTION_VALID_TIME		0X8C		// get how long to wait before changing motions status
-#define SET_STATIONARY_VALID_TIME	0x0D		// set how long to wait before changing presense status
-#define GET_STATIONARY_VALID_TIME	0x8D		// set how long to wait before changing presense status
+#define SET_MOTION_VALID_TIME		0x0C		// set how long to wait before changing stationary to active
+#define GET_MOTION_VALID_TIME		0X8C		// get how long to wait before changing stationary to active
+#define SET_STATIONARY_VALID_TIME	0x0D		// set how long to wait before changing from active to stationary
+#define GET_STATIONARY_VALID_TIME	0x8D		// get how long to wait before changing from active to stationary
+#define SET_ABSENCE_VALID_TIME		0x0E		// set how tong to wait before changing from absence to presence
+#define GET_ABSENCE_VALID_TIME		0x8E		// get how tong to wait before changing from absence to presence
 
 // stuff for the human status reports
 #define HUMAN_STATUS    			0x80        // human status packet
@@ -139,7 +141,9 @@ class Radar {
 		byte getMotionRange();
 		bool setMotionValidTime(unsigned int t);
 		unsigned int getMotionValidTime();
-
+		bool setAbsenceValidTime(unsigned int t);
+		unsigned int getAbsenceValidTime();
+	
 		bool setUnderlying(byte onoff);
 		byte getUnderlying();
 		

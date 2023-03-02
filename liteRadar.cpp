@@ -39,16 +39,13 @@ unsigned int Radar::getDataLength(byte control, byte command) {
 			}
 		case CUSTOM:
 			switch(command) {
-				case GET_MOTION_VALID_TIME:
-					return 4;
-					break;
-				case GET_STATIONARY_VALID_TIME:
-					return 4;
-					break;
 				case SET_MOTION_VALID_TIME:
 					return 4;
 					break;
 				case SET_STATIONARY_VALID_TIME:
+					return 4;
+					break;
+				case SET_ABSENCE_VALID_TIME:
 					return 4;
 					break;
 				default:
@@ -103,11 +100,14 @@ bool Radar::getFrame(Frame* frame) {
 
 void Radar::printFrame(Frame* frame) {
 	char output[4];
+	Serial.print("msg = ");
 	for (int n = 0; n < frame->l; n++) {
 		sprintf(output, "%02X", frame->msg[n]);
 		Serial.print(output);
 		Serial.print(' ');
 	}
+	Serial.print("  l = ");
+	Serial.print(frame->l);
 	Serial.println();
 	
 }
@@ -219,8 +219,8 @@ bool Radar::validateFrame(Frame* frame, byte control, byte command, unsigned cha
 	byte checksum = 0;
 	unsigned int cs_byte = frame->l - 3;
 	int data_length = frame->l - 9;
-	if (frame->msg[CONTROL] != control) return false;	// command did not match
-	if (frame->msg[COMMAND] != command) return false;	// control did not match
+	if (frame->msg[CONTROL] != control) return false;	// control did not match
+	if (frame->msg[COMMAND] != command) return false;	// command did not match
 	for (int i = 0; i < cs_byte; i++) {
 		checksum = checksum + frame->msg[i];
 	}
@@ -290,6 +290,7 @@ bool Radar::getParam(byte control, byte command, unsigned char* data) {				// cu
 			if (getFrame(&ret)) {
 				if (validateFrame(&ret, control, command, data, false)) {
 					data_length = ret.l - 9;
+					Serial.printf(" data_length = %d\n, data_length");
 					if (data_length == 1 ) {
 						data[0] = 0x00;
 						data[1] = 0x00;
@@ -469,31 +470,6 @@ byte Radar::getPresenceRange() {
 }
 
 /*!
- * @fn setStationaryValidTime
- * @brief set presence range for the current custom mode
- * @param unsigned int values in ms
- * @returns true for success, false for failed
- */
-bool Radar::setStationaryValidTime(unsigned int t) {
-	unsigned char data[] = {0x00, 0x00, 0x00, 0x0F};
-	int_to_char(data, t);
-	return setParam(CUSTOM, SET_STATIONARY_VALID_TIME, data);
-}
-
-/*!
- * @fn getStationaryValidTime
- * @brief gets the current stationary valid time value
- * @returns values in ms -1 on failure 
- */
-unsigned int Radar::getStationaryValidTime() {
-	unsigned char data[] = {0x00, 0x00, 0x00, 0x0F};
-	if (getParam(CUSTOM, GET_STATIONARY_VALID_TIME, data)) {
-		int i = char_to_int(data);
-		return i;
-	}
-}
-
-/*!
  * @fn setMotionThreshold
  * @brief set motion threshold for the current custom mode
  * @param unsigned int value between 0 and 250
@@ -540,6 +516,31 @@ byte Radar::getMotionRange() {
 }
 
 /*!
+ * @fn setStationaryValidTime
+ * @brief set presence range for the current custom mode
+ * @param unsigned int values in ms
+ * @returns true for success, false for failed
+ */
+bool Radar::setStationaryValidTime(unsigned int t) {
+	unsigned char data[] = {0x00, 0x00, 0x00, 0x0F};
+	int_to_char(data, t);
+	return setParam(CUSTOM, SET_STATIONARY_VALID_TIME, data);
+}
+
+/*!
+ * @fn getStationaryValidTime
+ * @brief gets the current stationary valid time value
+ * @returns values in ms -1 on failure 
+ */
+unsigned int Radar::getStationaryValidTime() {
+	unsigned char data[] = {0x00, 0x00, 0x00, 0x0F};
+	if (getParam(CUSTOM, GET_STATIONARY_VALID_TIME, data)) {
+		int i = char_to_int(data);
+		return i;
+	}
+}
+
+/*!
  * @fn setMotionValidTime
  * @brief set presence range for the current custom mode
  * @param unsigned int values in ms
@@ -559,7 +560,33 @@ bool Radar::setMotionValidTime(unsigned int t) {
 unsigned int Radar::getMotionValidTime() {
 	unsigned char data[] = {0x00, 0x00, 0x00, 0x0F};
 	if (getParam(CUSTOM, GET_MOTION_VALID_TIME, data)) {
-		return char_to_int(data);
+		int i = char_to_int(data);
+		return i;
+	}
+}
+
+/*!
+ * @fn setAbsenceValidTime
+ * @brief set absence valid time for the current custom mode
+ * @param unsigned int values in ms
+ * @returns true for success, false for failed
+ */
+bool Radar::setAbsenceValidTime(unsigned int t) {
+	unsigned char data[] = {0x00, 0x00, 0x00, 0x0F};
+	int_to_char(data, t);
+	return (setParam(CUSTOM, SET_ABSENCE_VALID_TIME, data));
+}
+
+/*!
+ * @fn getAbsenceValidTime
+ * @brief gets the current absence valid time value
+ * @returns values in ms -1 on failure 
+ */
+unsigned int Radar::getAbsenceValidTime() {
+	unsigned char data[] = {0x00, 0x00, 0x00, 0x0F};
+	if (getParam(CUSTOM, GET_ABSENCE_VALID_TIME, data)) {
+		int i = char_to_int(data);
+		return i;
 	}
 }
 
