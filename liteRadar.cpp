@@ -290,7 +290,6 @@ bool Radar::getParam(byte control, byte command, unsigned char* data) {				// cu
 			if (getFrame(&ret)) {
 				if (validateFrame(&ret, control, command, data, false)) {
 					data_length = ret.l - 9;
-					Serial.printf(" data_length = %d\n, data_length");
 					if (data_length == 1 ) {
 						data[0] = 0x00;
 						data[1] = 0x00;
