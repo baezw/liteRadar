@@ -5,7 +5,7 @@ This is a driver library for the 24GHz Seeed Human Static Presence Lite mmWave s
 
 ### Notes
 
-- This library will fail completely if the module has underlying data open. I used the Windows software to look at the underlyting data flows and exited the application without closing the data flow. The module remembers status of all of the parameters through power cycles including undeying data status. I have not found a way to factory reset the thing yet.
+- Most of this library will fail completely if the module has underlying data open. I used the Windows software to look at the underlyting data flows and exited the application without closing the data flow. The module remembers status of all of the parameters through power cycles including undeying data status. I have not found a way to factory reset the thing yet. There are working api calls to turn on and off underlying data and get the status. I recommend explicitly turning it off when you start your sensor.
 - The way this library is written set/get parameter commands watch return frames for a specified period of time and looks for the matching return frame. I thought that a successfull command indication was more important than a few discarded packets. Since the purpose is to use in sensors, that setup stuff happens at startup and before the radar is even warmed up. If you use these function is a time critical loop, there may be problems.
 - *Fair warning* I am not sure about much about how this module works, so no promises
 
@@ -36,6 +36,8 @@ This is a driver library for the 24GHz Seeed Human Static Presence Lite mmWave s
 |int getStationaryValidTime(); | gets time to wait before changing presence status |
 |bool setMotionValidTime(unsigned int t); | sets time to wait before changing motion status |
 |int getMotionValidTime(); | gets time to wait before changing motion status |
+|bool setUnderlying(bool onoff); | api call to turn on or off underlying data reports |
+|byte getUnderlying(); | api call to get current staus of underlying data reports|
 | bool updateStatus(); | this is the function to be placed in a loop to check for messages and update values |
 | bool isPresent(); | returns true for present, false for absent after time of absence delay |
 | bool isMoving(); | returns true for motion, false for no motion |
