@@ -74,9 +74,13 @@
 // system frames
 #define SYSTEM          			0x01        // heartbeat packet or reset
 #define HEARTBEAT					0x01		// heartbeat frame
-#define RESET						0x02		//reset command
+#define RESET						0x02		// reset command
 
-#define TIME_TO_WAIT				3000		// time to wait on a return frame match
+#define UNDERLYING					0x08		// control byte for underlying data
+#define SET_UNDERLYING				0x00		// command to set underlying data on/off
+#define GET_UNDERLYING				0x80		// command to get current undelying data byte
+
+#define TIME_TO_WAIT				5000		// time to wait on a return frame match
 
 /*!
  * @struct		Frame
@@ -136,6 +140,9 @@ class Radar {
 		bool setMotionValidTime(unsigned int t);
 		unsigned int getMotionValidTime();
 
+		bool setUnderlying(byte onoff);
+		byte getUnderlying();
+		
 		bool updateStatus();
 		bool isPresent();
 		bool isMoving();

@@ -565,6 +565,29 @@ unsigned int Radar::getMotionValidTime() {
 }
 
 /*!
+ * @fn setUnderlying
+ * @brief turns on an off the automatic reporting of underlying data
+ * @param onoff byte value of 0 or 1 turning off or on the underlying data
+ * @returns bool true if successful false if failed
+ */
+bool Radar::setUnderlying(byte onoff) {
+	unsigned char data[] = {0x00, 0x00, 0x00, onoff};
+	return setParam(UNDERLYING, SET_UNDERLYING, data);
+}
+
+/*!
+ * @fn getUnderlying
+ * @brief  returns byte indicating current  status of the underlying data switch
+ * @returns byte value 0 or 1
+*/
+byte Radar::getUnderlying() {
+	unsigned char data[] = {0x00, 0x00, 0x00, 0x0F};
+	if (getParam(UNDERLYING, GET_UNDERLYING, data)) {
+		return data[3];
+	}
+}
+
+/*!
  * @fn isPresent
  * @brief returns current state of presence
  * @returns true for presnce, false for absence
