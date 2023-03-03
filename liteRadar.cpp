@@ -84,6 +84,7 @@ bool Radar::getFrame(Frame* frame) {
 				}
 				frame->l = l+1;
 				frame->msg[l] = c;
+				if (frame->msg[l-1] != END1) return false;
 				return true;
 			}
 		}
